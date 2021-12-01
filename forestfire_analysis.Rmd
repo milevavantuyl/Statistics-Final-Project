@@ -1,0 +1,36 @@
+---
+title: "forestfire_analysis"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load Data
+```{r cars}
+fires <- read.csv("forestfires.csv", header = TRUE, sep = ",")
+attach(fires)
+
+View(fires)
+```
+
+## Part 1: Descriptive Analysis
+
+```{r}
+
+```
+
+## Part 2: One-sample statistical inference for response variable ('area')
+
+```{r}
+
+```
+
+
+## Part 3: Two-sample statistical inference for categorical variable 
+
+## Part 4: Two-sample statistical inference
+
+## Part 5: Which explanatory variables are the best predictors for 'area'?
+

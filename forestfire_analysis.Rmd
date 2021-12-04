@@ -7,19 +7,42 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Load Data
-```{r cars}
-fires <- read.csv("forestfires.csv", header = TRUE, sep = ",")
-attach(fires)
+## Import packages
+```{r}
+library(ggplot2)
+library(plotly)
+library(pheatmap)
+library(corrplot)
+```
 
-View(fires)
+## Load Data
+```{r}
+fires <- read.csv("forestfires.csv", header = TRUE, sep = ",")
+
+# View(fires)
 ```
 
 ## Part 1: Descriptive Analysis
 
+### Distribution of response variable
 ```{r}
+summary(fires$area)
+```
+
+```{r}
+# Boxplots
+ggplot(fires, aes(y = area)) + geom_boxplot()
+ggplot(fires, aes(y = area)) + geom_boxplot() + ylim(0,125)
+```
+
+# Histogram
+```{r}
+ggplot(fires, aes(x = area)) + geom_histogram()
+ggplot(fires, aes(x = area)) + geom_histogram() + xlim(-1, 100) + ylim(0, 100)
 
 ```
+### Distribution of categorical explanatory variable (month and region)
+
 
 ## Part 2: One-sample statistical inference for response variable ('area')
 
@@ -33,4 +56,14 @@ View(fires)
 ## Part 4: Two-sample statistical inference
 
 ## Part 5: Which explanatory variables are the best predictors for 'area'?
+### Correlation plot of numeric explanatory variables
+
+```{r}
+# Paul, edit as you wish. I'm not sure which of the columns you will want to obtain correlations for in the 'select' statement. 
+corr_matrix <- fires %>%
+                  select(FFMC, DMC, DC, ISI, temp, RH, wind, rain, area) %>%
+                  cor
+corr_matrix
+corrplot(corr_matrix)
+```
 

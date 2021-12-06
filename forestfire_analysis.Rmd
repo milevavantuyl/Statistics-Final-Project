@@ -17,6 +17,7 @@ library(tidyverse)
 library(sqldf)
 library(ggpubr)
 library(rstatix)
+library(car)
 ```
 
 ## Load Data
@@ -24,9 +25,7 @@ library(rstatix)
 fires <- read.csv("forestfires.csv", header = TRUE, sep = ",")
 fires$X <- as.factor(fires$X)
 fires$Y <- as.factor(fires$Y)
-
 fires.withoutOutliers <- fires[fires$area <= 300,]
-
 # View(fires)
 ```
 
@@ -86,7 +85,6 @@ ggplot(regional.rates, aes(x=xcoord, y = count, fill = ycoord)) + geom_col() + t
 numeric.cols <- fires %>% select(is.numeric) %>% reshape2::melt()
 # ggplot(numeric.cols, aes(y = value)) + geom_boxplot(aes(fill=variable)) + facet_wrap(~variable, scales = "free")
 ggplot(numeric.cols, aes(x = value)) + geom_histogram() + facet_wrap(~variable, scales = "free")
-
 ```
 
 ### TO DO: Look into temporal differences by month
@@ -97,7 +95,6 @@ The expected size of a forest fire in Portugal is 3.43 ha per fire (obtained the
 ```{r}
 num.fires <- 8181
 burned.area <- 28088
-
 (burned.area.per.fire <- burned.area/num.fires)
 ```
 
@@ -109,7 +106,6 @@ Let $H_0: \mu = 3.433$ and $H_0: \mu \neq 3.433$.
 
 ```{r}
 t.test(fires$area, mu = 3.433)
-
 # Cohen's d
 (mean(fires$area) - 3.433) / sd(fires$area)
 ```
@@ -122,7 +118,6 @@ This corresponds with our observations from the confidence interval. The confide
 ```{r}
 # Sample computation after removing outlier
 t.test(fires.withoutOutliers$area, mu = 3.433)
-
 # Cohen's d
 (mean(fires.withoutOutliers$area) - 3.433) / sd(fires.withoutOutliers$area)
 ```
@@ -142,13 +137,10 @@ group by season
 ```{r}
 #winter spring split
 df$WinterSpring <- (df$month == 'mar' | df$month == 'apr' | df$month == 'may' | df$month == 'dec' | df$month == 'jan' | df$month == 'feb' )
-
 #summer fall split
 df$SummerFall <- (df$month == 'jun' | df$month == 'jul' | df$month == 'aug' | df$month == 'sep' | df$month == 'oct' | df$month == 'nov' )
-
 #combine
 df<-df%>%pivot_longer(-c(1:13), names_to="seasons")%>%filter(value==TRUE)%>%select(-value)
-
 ```
 
 
@@ -164,7 +156,6 @@ summary of variables
 ```{r}
 summary(s1$area)
 summary(s2$area)
-
 ggboxplot(df, x = "seasons", y = "area", 
           color = "seasons", palette = c("#00AFBB", "#E7B800"),
         ylab = "Area", xlab = "Season")
@@ -179,11 +170,9 @@ assumption tests
 #normality
 with(s1, shapiro.test(area[seasons == 'WinterSpring']))
 with(s2, shapiro.test(area[seasons == 'SummerFall']))
-
 #homogeneity
 res.ftest <- var.test(area ~ seasons, data = df)
 res.ftest
-
 ```
 
 
@@ -203,12 +192,66 @@ cohens_d(df, area ~ seasons, var.equal = FALSE)
 ## Part 5: Which explanatory variables are the best predictors for 'area'?
 ### Correlation plot of numeric explanatory variables
 
+
 ```{r}
-# Paul, edit as you wish. I'm not sure which of the columns you will want to obtain correlations for in the 'select' statement. 
 corr_matrix <- fires %>%
                   select(FFMC, DMC, DC, ISI, temp, RH, wind, rain, area) %>%
                   cor
 corr_matrix
-corrplot(corr_matrix)
+corrplot(corr_matrix, addCoef.col = 'black')
 ```
+
+The correlation matrix indicated that all of our explanatory variables have very weak associations with area burned. The strongest associations are a positive linear correlation with temperature (0.1), a negative linear correlation with Relative Humidity (RH, -0.08), and a positive linear correlation with Duff Moisture Code (DMC, 0.07) which represents the moisture of materials below the fine fuels.
+
+
+
+
+```{r}
+mult_reg <- lm(area ~ FFMC+DMC+DC+ISI+temp+RH+wind+rain, data = fires)
+summary(mult_reg)
+```
+
+### Interpreting the model
+
+Residuals: The difference between the observed value and the predicted value. The median residual is -9.35, the min -31.13, and the max is 1068.99. The large value of the max residual indicated we may want to remove outliers.
+
+Pr(>|t|): This is the p-value that corresponds to the t-statistic. If this value is less than some alpha level (e.g. 0.05) than the predictor variable is said to be statistically significant. As can be seen, none of our explanatory variables can be said to be statistically significant predictors of area burned, but the least insignificant are DMC (0.253) and temperature (0.282)
+
+Residual standard error: 63.64. The average distance that the observed values fall from the regression line. 
+
+Multiple R-Squared: The coefficient of determination. At only 0.016, it tells us that only 1.6% of the variance in the response variable can be explained by the predictor variables.
+
+p-value: This is the p-value that corresponds to the F-statistic. If this value is less than some significance level (e.g. 0.05), then the regression model fits the data better than a model with no predictors. Again, at 0.4096, our model cannot be said to be statistically significant.
+
+
+### Added Variable/Partial Regression plots
+Added variable plots are individual plots that display the relationship between a response variable and one predictor variable in a multiple linear regression model, while controlling for the presence of other predictor variables in the model.
+
+```{r}
+avPlots(mult_reg)
+```
+
+
+### Outliers removed
+
+```{r}
+corr_matrix <- fires.withoutOutliers %>%
+                  select(FFMC, DMC, DC, ISI, temp, RH, wind, rain, area) %>%
+                  cor
+corr_matrix
+corrplot(corr_matrix, addCoef.col = 'black')
+```
+
+With outliers removed, the correlations between individual explanatory variables are even weaker.
+
+
+```{r}
+mult_reg_outliers <- lm(area ~ FFMC+DMC+DC+ISI+temp+RH+wind+rain, data = fires.withoutOutliers)
+summary(mult_reg_outliers)
+avPlots(mult_reg_outliers)
+```
+
+We can see that our residuals have gotten smaller after removing outliers, as expected. Unfortunately, our model cannot be said to fit any better, with a slightly smaller coefficient of determination and a larger p-value. Interestingly in this model ISI has become much more significant, with a Pr(>|t|) value of 0.0949.
+
+
 

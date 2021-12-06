@@ -13,6 +13,10 @@ library(ggplot2)
 library(plotly)
 library(pheatmap)
 library(corrplot)
+library(tidyverse)
+library(sqldf)
+library(ggpubr)
+library(rstatix)
 ```
 
 ## Load Data
@@ -79,6 +83,75 @@ This corresponds with our observations from the confidence interval. The confide
 ## Part 3: Two-sample statistical inference for categorical variable 
 
 ## Part 4: Two-sample statistical inference
+
+load data
+```{r}
+df <- fires
+```
+
+
+
+group by season
+```{r}
+#winter spring split
+df$WinterSpring <- (df$month == 'mar' | df$month == 'apr' | df$month == 'may' | df$month == 'dec' | df$month == 'jan' | df$month == 'feb' )
+
+#summer fall split
+df$SummerFall <- (df$month == 'jun' | df$month == 'jul' | df$month == 'aug' | df$month == 'sep' | df$month == 'oct' | df$month == 'nov' )
+
+#combine
+df<-df%>%pivot_longer(-c(1:13), names_to="seasons")%>%filter(value==TRUE)%>%select(-value)
+
+```
+
+
+make seasons different tables
+```{r}
+s1 <- sqldf("select * from df where seasons = 'WinterSpring'  and  area < 50")
+s2 <- sqldf("select * from df where seasons = 'SummerFall'  and area < 400")
+#different outlier split
+s2_1 <- sqldf("select * from s2 where seasons = 'SummerFall'  and area < 125")
+```
+
+summary of variables
+```{r}
+summary(s1$area)
+summary(s2$area)
+
+ggboxplot(df, x = "seasons", y = "area", 
+          color = "seasons", palette = c("#00AFBB", "#E7B800"),
+        ylab = "Area", xlab = "Season")
+        
+boxplot(s1$area,col="#00AFBB",xlab='WinterSpring',ylab='Area')
+boxplot(s2$area,col="#E7B800",xlab='SummerFall',ylab='Area')
+boxplot(s2_1$area,col="#E7B800",xlab='SummerFall',ylab='Area')
+```
+
+assumption tests
+```{r}
+#normality
+with(s1, shapiro.test(area[seasons == 'WinterSpring']))
+with(s2, shapiro.test(area[seasons == 'SummerFall']))
+
+#homogeneity
+res.ftest <- var.test(area ~ seasons, data = df)
+res.ftest
+
+```
+
+
+t-test
+```{r}
+ave_wint <- mean(s1$area)
+ave_sum <- mean(s2$area)
+res <- t.test(s1$area, s2$area)
+res
+```
+cohen's d 
+```{r}
+cohens_d(df, area ~ seasons, var.equal = FALSE)
+```
+
 
 ## Part 5: Which explanatory variables are the best predictors for 'area'?
 ### Correlation plot of numeric explanatory variables

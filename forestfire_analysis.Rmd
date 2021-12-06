@@ -22,6 +22,10 @@ library(rstatix)
 ## Load Data
 ```{r}
 fires <- read.csv("forestfires.csv", header = TRUE, sep = ",")
+fires$X <- as.factor(fires$X)
+fires$Y <- as.factor(fires$Y)
+
+fires.withoutOutliers <- fires[fires$area <= 300,]
 
 # View(fires)
 ```
@@ -35,6 +39,8 @@ Specifically: area, months, and location variation by y value (North/ South)
 ### Distribution of response variable
 ```{r}
 summary(fires$area)
+range(fires$area)
+sd(fires$area)
 ```
 
 ```{r}
@@ -47,11 +53,43 @@ ggplot(fires, aes(y = area)) + geom_boxplot() + ylim(0,300)
 ```{r}
 ggplot(fires, aes(x = area)) + geom_histogram()
 ggplot(fires, aes(x = area)) + geom_histogram() + xlim(-1, 300) + ylim(0, 100)
+```
+
+TO DO - Explain outliers
+
+### Distribution of categorical explanatory variable (month)
+```{r}
+fires$month <- factor(fires$month, c('jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'))
+monthly.rates <- as.data.frame(table(fires$month))
+colnames(monthly.rates) <- c('month', 'count')
+ggplot(monthly.rates, aes(x=month, y = count)) + geom_col(color = 'black', fill = 'firebrick3') + theme_classic() + ggtitle("Frequency of fires by month") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+### Distribution of categorical explanatory variable (region)
+TO DO - find better representation of this data
+
+```{r}
+regional.rates <- as.data.frame(table(fires$Y))
+colnames(regional.rates) <- c('ycoord', 'count')
+ggplot(regional.rates, aes(x=ycoord, y = count)) + geom_col(color = 'black', fill = 'firebrick3') + theme_classic() + ggtitle("Frequency of fires by ycoordinate") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+```{r}
+regional.rates <- as.data.frame(table(fires$X, fires$Y))
+colnames(regional.rates) <- c('ycoord', 'xcoord', 'count')
+ggplot(regional.rates, aes(x=xcoord, y = count, fill = ycoord)) + geom_col() + theme_classic() + ggtitle("Frequency of fires by region") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+# Distribution of all numeric columns 
+```{r}
+numeric.cols <- fires %>% select(is.numeric) %>% reshape2::melt()
+# ggplot(numeric.cols, aes(y = value)) + geom_boxplot(aes(fill=variable)) + facet_wrap(~variable, scales = "free")
+ggplot(numeric.cols, aes(x = value)) + geom_histogram() + facet_wrap(~variable, scales = "free")
 
 ```
-### Distribution of categorical explanatory variable (month and region)
 
-### Look into temporal differences by month
+### TO DO: Look into temporal differences by month
 
 ## Part 2: One-sample statistical inference for response variable 
 
@@ -72,6 +110,7 @@ Let $H_0: \mu = 3.433$ and $H_0: \mu \neq 3.433$.
 ```{r}
 t.test(fires$area, mu = 3.433)
 
+# Cohen's d
 (mean(fires$area) - 3.433) / sd(fires$area)
 ```
 The p-value is very small (0.000829). The result is statistically significant and so we reject the null hypothesis.   
@@ -79,6 +118,14 @@ The p-value is very small (0.000829). The result is statistically significant an
 Cohen's d is 0.148 which is very small, so the result has very small practical significance. 
 
 This corresponds with our observations from the confidence interval. The confidence interval is from 7.34 to 18.34. So the value 3.433 is not in the confidence interval and is thus not statistically significant. Additionally, 3.433 is relatively far from the lower end of the confidence interval and is thus also not practically significant. 
+
+```{r}
+# Sample computation after removing outlier
+t.test(fires.withoutOutliers$area, mu = 3.433)
+
+# Cohen's d
+(mean(fires.withoutOutliers$area) - 3.433) / sd(fires.withoutOutliers$area)
+```
 
 ## Part 3: Two-sample statistical inference for categorical variable 
 

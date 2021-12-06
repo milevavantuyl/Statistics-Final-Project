@@ -24,6 +24,10 @@ fires <- read.csv("forestfires.csv", header = TRUE, sep = ",")
 
 ## Part 1: Descriptive Analysis
 
+Variables of interest for descriptive analysis. 
+Distributions of all the numeric variables. 
+Specifically: area, months, and location variation by y value (North/ South)
+
 ### Distribution of response variable
 ```{r}
 summary(fires$area)
@@ -32,24 +36,45 @@ summary(fires$area)
 ```{r}
 # Boxplots
 ggplot(fires, aes(y = area)) + geom_boxplot()
-ggplot(fires, aes(y = area)) + geom_boxplot() + ylim(0,125)
+ggplot(fires, aes(y = area)) + geom_boxplot() + ylim(0,300)
 ```
 
 # Histogram
 ```{r}
 ggplot(fires, aes(x = area)) + geom_histogram()
-ggplot(fires, aes(x = area)) + geom_histogram() + xlim(-1, 100) + ylim(0, 100)
+ggplot(fires, aes(x = area)) + geom_histogram() + xlim(-1, 300) + ylim(0, 100)
 
 ```
 ### Distribution of categorical explanatory variable (month and region)
 
+### Look into temporal differences by month
 
-## Part 2: One-sample statistical inference for response variable ('area')
+## Part 2: One-sample statistical inference for response variable 
 
+The expected size of a forest fire in Portugal is 3.43 ha per fire (obtained the statistics below from https://www.icnf.pt/)
 ```{r}
+num.fires <- 8181
+burned.area <- 28088
 
+(burned.area.per.fire <- burned.area/num.fires)
 ```
 
+1. Random sample? - No since we're only looking at samples from one forest in Portugal
+2. Normality assumption is not satisfied. Right skewed
+3. Outliers are present. We should remove them. 
+
+Let $H_0: \mu = 3.433$ and $H_0: \mu \neq 3.433$.
+
+```{r}
+t.test(fires$area, mu = 3.433)
+
+(mean(fires$area) - 3.433) / sd(fires$area)
+```
+The p-value is very small (0.000829). The result is statistically significant and so we reject the null hypothesis.   
+
+Cohen's d is 0.148 which is very small, so the result has very small practical significance. 
+
+This corresponds with our observations from the confidence interval. The confidence interval is from 7.34 to 18.34. So the value 3.433 is not in the confidence interval and is thus not statistically significant. Additionally, 3.433 is relatively far from the lower end of the confidence interval and is thus also not practically significant. 
 
 ## Part 3: Two-sample statistical inference for categorical variable 
 
